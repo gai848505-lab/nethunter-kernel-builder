@@ -101,7 +101,11 @@ jobs:
             CROSS_COMPILE=$CROSS_COMPILE \
             CROSS_COMPILE_ARM32=$CROSS_COMPILE_ARM32 \
             CLANG_TRIPLE=$CLANG_TRIPLE \
-            Image.gz dtbs
+            Image.gz-dtb Image.gz dtbs || true
+
+          if [ ! -f "out/arch/arm64/boot/Image.gz-dtb" ] && [ -f "out/arch/arm64/boot/Image.gz" ]; then
+            cat out/arch/arm64/boot/Image.gz out/arch/arm64/boot/dts/qcom/*.dtb > out/arch/arm64/boot/Image.gz-dtb 2>/dev/null || true
+          fi
           cd ..
 
       - name: Package with AnyKernel3
@@ -111,7 +115,9 @@ jobs:
           sed -i 's/do.devicecheck=1/do.devicecheck=0/g' anykernel.sh
           sed -i 's/block=auto/block=\/dev\/block\/bootdevice\/by-name\/boot/g' anykernel.sh
           
-          if [ -f "../kernel/out/arch/arm64/boot/Image.gz" ]; then
+          if [ -f "../kernel/out/arch/arm64/boot/Image.gz-dtb" ]; then
+            cp ../kernel/out/arch/arm64/boot/Image.gz-dtb ./Image.gz-dtb
+          elif [ -f "../kernel/out/arch/arm64/boot/Image.gz" ]; then
             cp ../kernel/out/arch/arm64/boot/Image.gz .
           elif [ -f "../kernel/out/arch/arm64/boot/Image" ]; then
             cp ../kernel/out/arch/arm64/boot/Image .
