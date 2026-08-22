@@ -35,6 +35,9 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/LineageOS/android_kernel_lge_sm8150.git -b lineage-20 kernel
           cd kernel
+          # Patch header includes for LGE specific drivers
+          find . -name "board_lge.h" -exec echo "Found LGE Header: {}" \;
+          sed -i '1s/^/#include <soc\/qcom\/lge\/board_lge.h>\n/' fs/proc/cmdline.c techpack/audio/asoc/codecs/es9218p.c drivers/gpu/drm/msm/lge/lge_dsi_panel.c || true
           git clone --depth=1 https://github.com/aircrack-ng/rtl8812au.git drivers/net/wireless/rtl8812au || true
           cd ..
 
@@ -47,20 +50,16 @@ jobs:
           export CLANG_TRIPLE=aarch64-linux-gnu-
           export CROSS_COMPILE=aarch64-linux-android-
           export CROSS_COMPILE_ARM32=arm-linux-androideabi-
+          export KCFLAGS="-Wno-error -Wno-implicit-function-declaration -Wno-error=implicit-function-declaration"
 
-          # 1. Check available config fragments
-          LGE_CONFIG=""
-          if [ -f "arch/arm64/configs/vendor/flashlmdd.config" ]; then
-            LGE_CONFIG="vendor/flashlmdd.config"
-          elif [ -f "arch/arm64/configs/vendor/alphaplus.config" ]; then
-            LGE_CONFIG="vendor/alphaplus.config"
-          fi
-
-          echo "Using defconfig: vendor/sm8150-perf_defconfig $LGE_CONFIG"
-          make O=out CC=clang vendor/sm8150-perf_defconfig $LGE_CONFIG
+          # 1. Base defconfig
+          make O=out CC=clang vendor/sm8150-perf_defconfig vendor/flashlmdd.config || \
+          make O=out CC=clang vendor/sm8150-perf_defconfig vendor/alphaplus.config || \
+          make O=out CC=clang vendor/sm8150-perf_defconfig
 
           # 2. Safely enable NetHunter features using scripts/config
           ./scripts/config --file out/.config \
+            --enable CONFIG_MACH_LGE \
             --enable CONFIG_CFG80211 \
             --enable CONFIG_CFG80211_WEXT \
             --enable CONFIG_MAC80211 \
@@ -90,6 +89,7 @@ jobs:
             CROSS_COMPILE=$CROSS_COMPILE \
             CROSS_COMPILE_ARM32=$CROSS_COMPILE_ARM32 \
             CLANG_TRIPLE=$CLANG_TRIPLE \
+            KCFLAGS="$KCFLAGS" \
             Image.gz dtbs
           cd ..
 
