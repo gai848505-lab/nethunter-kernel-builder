@@ -35,6 +35,11 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/LineageOS/android_kernel_lge_sm8150.git -b lineage-20 kernel
           cd kernel
+          # Patch header syntax in lge_prm.h
+          find . -name "lge_prm.h" -exec sed -i 's/{return 0}/{return 0;}/g' {} +
+          find . -name "lge_prm.h" -exec sed -i 's/void lge_prm_display_set_event(.*) {return 0};/void lge_prm_display_set_event(enum display_event event, int value) { return; };/g' {} +
+          # Patch headers in source files
+          sed -i '1s/^/#include <linux\/types.h>\n#include <soc\/qcom\/lge\/board_lge.h>\n/' fs/proc/cmdline.c techpack/audio/asoc/codecs/es9218p.c drivers/gpu/drm/msm/lge/lge_dsi_panel.c || true
           git clone --depth=1 https://github.com/aircrack-ng/rtl8812au.git drivers/net/wireless/rtl8812au || true
           cd ..
 
@@ -50,7 +55,6 @@ jobs:
 
           mkdir -p out
           
-          # Find LGE device fragment
           CONFIG_FRAG=""
           if [ -f "arch/arm64/configs/vendor/flashlmdd.config" ]; then
             CONFIG_FRAG="arch/arm64/configs/vendor/flashlmdd.config"
@@ -61,12 +65,9 @@ jobs:
           echo "Merging configs with merge_config.sh..."
           ARCH=arm64 ./scripts/kconfig/merge_config.sh -m -O out arch/arm64/configs/vendor/sm8150-perf_defconfig $CONFIG_FRAG
 
-          # Safely enable Kali NetHunter features
+          # Enable Kali NetHunter features
           ./scripts/config --file out/.config \
             --enable CONFIG_MACH_LGE \
-            --enable CONFIG_LGE_PM \
-            --enable CONFIG_LGE_PM_CHARGING_CONTROLLER \
-            --enable CONFIG_LGE_HANDLE_PANIC \
             --enable CONFIG_CFG80211 \
             --enable CONFIG_CFG80211_WEXT \
             --enable CONFIG_MAC80211 \
