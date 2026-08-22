@@ -78,8 +78,8 @@ jobs:
             echo "cable_boot_type __attribute__((weak)) lge_get_boot_cable(void) { return 0; }" >> drivers/soc/qcom/lge/board_lge.c
           fi
 
-          # Patch UFS driver health descriptor function declaration and stub
-          sed -i '1s/^/struct ufs_hba;\nint ufshcd_read_health_desc(struct ufs_hba *hba, u8 *desc_buf, int size);\n/' drivers/scsi/ufs/ufshcd.c || true
+          # Patch UFS driver health descriptor function declaration with proper linux/types.h
+          sed -i '1s/^/#include <linux\/types.h>\nstruct ufs_hba;\nint ufshcd_read_health_desc(struct ufs_hba *hba, u8 *desc_buf, int size);\n/' drivers/scsi/ufs/ufshcd.c || true
           echo "int __attribute__((weak)) ufshcd_read_health_desc(struct ufs_hba *hba, u8 *desc_buf, int size) { return 0; }" >> drivers/scsi/ufs/ufshcd.c
 
           # Allow warnings and ignored optimization arguments without failing build
