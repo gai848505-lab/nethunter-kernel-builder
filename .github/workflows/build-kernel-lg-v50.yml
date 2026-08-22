@@ -107,6 +107,8 @@ jobs:
           echo "int __weak oeis_create_sysfs(void *s, void *d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
           echo "int __weak oeis_destroy_sysfs(void *s, void *d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
           echo "int __weak pd_phy_update_frame_filter(void *s, u8 d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak lge_get_boot_cable(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak lge_get_mfts_mode(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
           echo "obj-y += lge_stubs.o" >> arch/arm64/kernel/Makefile
 
           # Allow warnings and ignored optimization arguments without failing build
