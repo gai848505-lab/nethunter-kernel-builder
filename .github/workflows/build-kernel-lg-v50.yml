@@ -109,6 +109,12 @@ jobs:
           echo "int __weak pd_phy_update_frame_filter(void *s, u8 d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
           echo "int __weak lge_get_boot_cable(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
           echo "int __weak lge_get_mfts_mode(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak lge_get_board_rev_no(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak lge_get_board_revision(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak lge_get_hw_rev(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak lge_get_sub_board_rev(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak lge_get_pmic_rev(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak lge_get_cable_type(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
           echo "obj-y += lge_stubs.o" >> arch/arm64/kernel/Makefile
 
           # Allow warnings and ignored optimization arguments without failing build
