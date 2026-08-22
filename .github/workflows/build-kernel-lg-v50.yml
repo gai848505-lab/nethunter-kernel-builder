@@ -86,10 +86,16 @@ jobs:
           sed -i '/struct dwc3 {/a \	void *usbpd;' drivers/usb/dwc3/core.h || true
           sed -i 's/dwc->usbpd = devm_usbpd_get_by_phandle(dev, "usbpd");/\/\/ dwc->usbpd/' drivers/usb/dwc3/core.c || true
 
-          # Patch USB-PD policy engine LG OEM moisture and DisplayPort extensions
-          sed -i '1s/^/#define DP_USBPD_VDM_CONFIGURE 0x10\n#define DUAL_ROLE_PROP_MOISTURE_UX_ENABLE 1\n#define DUAL_ROLE_PROP_MOISTURE_USB_DISABLE 0\n/' drivers/usb/pd/policy_engine.c || true
-          sed -i 's/pd->is_moisture_ux =/\/\/ pd->is_moisture_ux =/' drivers/usb/pd/policy_engine.c || true
-          sed -i 's/pd->moisture_usb_en =/\/\/ pd->moisture_usb_en =/' drivers/usb/pd/policy_engine.c || true
+          # Add missing LGE symbols stub into arch/arm64/kernel/lge_stubs.c
+          cat << 'EOF' > arch/arm64/kernel/lge_stubs.c
+#include <linux/types.h>
+#include <linux/compiler.h>
+int __weak lge_get_download_mode(void) { return 0; }
+int __weak lge_get_factory_boot(void) { return 0; }
+int __weak lge_get_boot_mode(void) { return 0; }
+int __weak touch_notifier_call_chain(unsigned long val, void *v) { return 0; }
+EOF
+          echo "obj-y += lge_stubs.o" >> arch/arm64/kernel/Makefile
 
           # Allow warnings and ignored optimization arguments without failing build
           echo "KBUILD_CFLAGS += -Wno-error -Wno-ignored-optimization-argument -Wno-unknown-warning-option -Wno-implicit-function-declaration" >> arch/arm64/Makefile
