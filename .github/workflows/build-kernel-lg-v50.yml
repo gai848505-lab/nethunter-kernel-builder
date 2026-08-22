@@ -98,6 +98,12 @@ jobs:
           echo "int __weak lge_get_factory_boot(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
           echo "int __weak lge_get_boot_mode(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
           echo "int __weak touch_notifier_call_chain(unsigned long val, void *v) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak msm_ois_create_sysfs(void *s, void *d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak msm_stopGyroThread(void *s) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak msm_ois_destroy_sysfs(void *s, void *d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak parse_ois_userdata(void *s, void *d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak lgit_imx363_init_set_onsemi_ois(void *s) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak lgit_imx363_onsemi_ois_poll_ready(void *s) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
           echo "obj-y += lge_stubs.o" >> arch/arm64/kernel/Makefile
 
           # Allow warnings and ignored optimization arguments without failing build
