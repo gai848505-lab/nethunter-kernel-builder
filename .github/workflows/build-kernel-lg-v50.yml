@@ -1,0 +1,143 @@
+name: Build NetHunter Kernel - LG V50 ThinQ (flashlmdd)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/build-kernel-lg-v50.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib \
+            git gnupg gperf libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools \
+            xsltproc zip zlib1g-dev libssl-dev libncurses5-dev libelf-dev xz-utils
+
+      - name: Download Toolchains (Clang & GCC Cross-Compilers)
+        run: |
+          mkdir -p toolchain
+          cd toolchain
+          echo "Cloning Proton Clang..."
+          git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
+          echo "Cloning AOSP GCC aarch64 & arm32..."
+          git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git gcc64
+          git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git gcc32
+          cd ..
+
+      - name: Fetch LG V50 Kernel Source (SM8150 / 4.14)
+        run: |
+          git clone --depth=1 https://github.com/LineageOS/android_kernel_lge_sm8150.git -b lineage-20 kernel
+          cd kernel
+          git clone --depth=1 https://github.com/aircrack-ng/rtl8812au.git drivers/net/wireless/rtl8812au || true
+          cd ..
+
+      - name: Configure Defconfig with NetHunter Features
+        run: |
+          cd kernel
+          DEFCONFIG="vendor/flashlmdd_perf_defconfig"
+          if [ ! -f "arch/arm64/configs/$DEFCONFIG" ]; then
+            DEFCONFIG="vendor/alphaplus_perf_defconfig"
+          fi
+          if [ ! -f "arch/arm64/configs/$DEFCONFIG" ]; then
+            DEFCONFIG="vendor/sm8150-perf_defconfig"
+          fi
+          echo "Target defconfig: $DEFCONFIG"
+
+          # Enable Kali NetHunter Kernel features
+          cat << 'EOF' >> "arch/arm64/configs/$DEFCONFIG"
+          # Kali NetHunter Wireless Injection & Monitor Mode
+          CONFIG_CFG80211=y
+          CONFIG_CFG80211_WEXT=y
+          CONFIG_MAC80211=y
+          CONFIG_MAC80211_RC_MINSTREL=y
+          CONFIG_MAC80211_RC_MINSTREL_HT=y
+          CONFIG_MAC80211_LEDS=y
+          CONFIG_NET_RADIO=y
+
+          # External USB Wi-Fi Adapters Drivers
+          CONFIG_ATH9K_HTC=m
+          CONFIG_ATH9K_HTC_DEBUGFS=y
+          CONFIG_RTL8187=m
+          CONFIG_RT2X00=m
+          CONFIG_RT2800USB=m
+          CONFIG_RT2800USB_RT33XX=y
+          CONFIG_RT2800USB_RT35XX=y
+          CONFIG_RT2800USB_RT53XX=y
+          CONFIG_RT2800USB_UNKNOWN=y
+          CONFIG_RTL8192CU=m
+          CONFIG_RTL8XXXU=m
+          CONFIG_MT7601U=m
+
+          # NetHunter HID Attack (BadUSB keyboard & mouse emulation)
+          CONFIG_USB_CONFIGFS_F_HID=y
+          CONFIG_USB_F_HID=y
+
+          # Namespaces and System Calls for NetHunter Chroot / Containers
+          CONFIG_SYSVIPC=y
+          CONFIG_POSIX_MQUEUE=y
+          CONFIG_NAMESPACES=y
+          CONFIG_UTS_NS=y
+          CONFIG_IPC_NS=y
+          CONFIG_PID_NS=y
+          CONFIG_NET_NS=y
+          EOF
+          cd ..
+
+      - name: Compile Kernel (Clang + LLVM)
+        run: |
+          cd kernel
+          export PATH="${GITHUB_WORKSPACE}/toolchain/clang/bin:${GITHUB_WORKSPACE}/toolchain/gcc64/bin:${GITHUB_WORKSPACE}/toolchain/gcc32/bin:$PATH"
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export CLANG_TRIPLE=aarch64-linux-gnu-
+          export CROSS_COMPILE=aarch64-linux-android-
+          export CROSS_COMPILE_ARM32=arm-linux-androideabi-
+
+          DEFCONFIG="vendor/flashlmdd_perf_defconfig"
+          if [ ! -f "arch/arm64/configs/$DEFCONFIG" ]; then
+            DEFCONFIG="vendor/alphaplus_perf_defconfig"
+          fi
+          if [ ! -f "arch/arm64/configs/$DEFCONFIG" ]; then
+            DEFCONFIG="vendor/sm8150-perf_defconfig"
+          fi
+
+          make O=out $DEFCONFIG
+          make -j$(nproc --all) O=out \
+            CC=clang \
+            CROSS_COMPILE=$CROSS_COMPILE \
+            CROSS_COMPILE_ARM32=$CROSS_COMPILE_ARM32 \
+            CLANG_TRIPLE=$CLANG_TRIPLE \
+            Image.gz-dtb || make -j$(nproc --all) O=out CC=clang Image.gz dtb.img
+          cd ..
+
+      - name: Package with AnyKernel3
+        run: |
+          git clone https://github.com/osm0sis/AnyKernel3.git anykernel
+          cd anykernel
+          sed -i 's/do.devicecheck=1/do.devicecheck=0/g' anykernel.sh
+          sed -i 's/block=auto/block=\/dev\/block\/bootdevice\/by-name\/boot/g' anykernel.sh
+          
+          if [ -f "../kernel/out/arch/arm64/boot/Image.gz-dtb" ]; then
+            cp ../kernel/out/arch/arm64/boot/Image.gz-dtb .
+          elif [ -f "../kernel/out/arch/arm64/boot/Image.gz" ]; then
+            cp ../kernel/out/arch/arm64/boot/Image.gz .
+            [ -f "../kernel/out/arch/arm64/boot/dtb.img" ] && cp ../kernel/out/arch/arm64/boot/dtb.img .
+          fi
+
+          ZIPNAME="NetHunter-Kernel-LG-V50-$(date +%Y%m%d_%H%M%S).zip"
+          zip -r9 "$ZIPNAME" * -x .git README.md *placeholder
+          echo "ZIPNAME=$ZIPNAME" >> $GITHUB_ENV
+          cd ..
+
+      - name: Upload Kernel Flashable Zip Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIPNAME }}
+          path: anykernel/${{ env.ZIPNAME }}
