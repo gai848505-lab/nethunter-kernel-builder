@@ -104,6 +104,9 @@ jobs:
           echo "int __weak parse_ois_userdata(void *s, void *d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
           echo "int __weak lgit_imx363_init_set_onsemi_ois(void *s) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
           echo "int __weak lgit_imx363_onsemi_ois_poll_ready(void *s) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak oeis_create_sysfs(void *s, void *d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak oeis_destroy_sysfs(void *s, void *d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
+          echo "int __weak pd_phy_update_frame_filter(void *s, u8 d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
           echo "obj-y += lge_stubs.o" >> arch/arm64/kernel/Makefile
 
           # Allow warnings and ignored optimization arguments without failing build
