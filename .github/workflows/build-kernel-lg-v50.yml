@@ -56,17 +56,19 @@ jobs:
           echo "extern int lge_get_boot_mode(void);" >> include/soc/qcom/lge/board_lge.h
           echo "extern int lge_get_factory_boot(void);" >> include/soc/qcom/lge/board_lge.h
           echo "extern int lge_get_mfts_mode(void);" >> include/soc/qcom/lge/board_lge.h
+          echo "extern bool lge_get_download_mode(void);" >> include/soc/qcom/lge/board_lge.h
           echo "extern cable_boot_type lge_get_boot_cable(void);" >> include/soc/qcom/lge/board_lge.h
           echo "#endif" >> include/soc/qcom/lge/board_lge.h
 
           # Include board_lge.h in callers
-          sed -i '1s/^/#include <linux\/types.h>\n#include <soc\/qcom\/lge\/board_lge.h>\n/' fs/proc/cmdline.c techpack/audio/asoc/codecs/es9218p.c drivers/gpu/drm/msm/lge/lge_dsi_panel.c || true
+          sed -i '1s/^/#include <linux\/types.h>\n#include <soc\/qcom\/lge\/board_lge.h>\n/' fs/proc/cmdline.c techpack/audio/asoc/codecs/es9218p.c drivers/gpu/drm/msm/lge/lge_dsi_panel.c drivers/power/reset/msm-poweroff.c || true
 
           # Provide weak stubs in board_lge.c for linker safety
           if [ -f "drivers/soc/qcom/lge/board_lge.c" ]; then
             echo "int __attribute__((weak)) lge_get_boot_mode(void) { return 0; }" >> drivers/soc/qcom/lge/board_lge.c
             echo "int __attribute__((weak)) lge_get_factory_boot(void) { return 0; }" >> drivers/soc/qcom/lge/board_lge.c
             echo "int __attribute__((weak)) lge_get_mfts_mode(void) { return 0; }" >> drivers/soc/qcom/lge/board_lge.c
+            echo "bool __attribute__((weak)) lge_get_download_mode(void) { return false; }" >> drivers/soc/qcom/lge/board_lge.c
             echo "cable_boot_type __attribute__((weak)) lge_get_boot_cable(void) { return 0; }" >> drivers/soc/qcom/lge/board_lge.c
           fi
 
