@@ -63,6 +63,9 @@ jobs:
           # Include board_lge.h in callers
           sed -i '1s/^/#include <linux\/types.h>\n#include <soc\/qcom\/lge\/board_lge.h>\n/' fs/proc/cmdline.c techpack/audio/asoc/codecs/es9218p.c drivers/gpu/drm/msm/lge/lge_dsi_panel.c drivers/power/reset/msm-poweroff.c || true
 
+          # Patch FG_LGE definition if missing
+          sed -i '1s/^/#ifndef FG_LGE\n#define FG_LGE BIT(16)\n#endif\n/' drivers/power/supply/qcom/qpnp-fg-gen4.c || true
+
           # Provide weak stubs in board_lge.c for linker safety
           if [ -f "drivers/soc/qcom/lge/board_lge.c" ]; then
             echo "int __attribute__((weak)) lge_get_boot_mode(void) { return 0; }" >> drivers/soc/qcom/lge/board_lge.c
