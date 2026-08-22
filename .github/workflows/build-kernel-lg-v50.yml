@@ -38,20 +38,29 @@ jobs:
           git clone --depth=1 https://github.com/aircrack-ng/rtl8812au.git drivers/net/wireless/rtl8812au || true
           cd ..
 
-      - name: Configure Defconfig with LGE & NetHunter Features
+      - name: Compile Kernel with NetHunter & LGE Options
         run: |
           cd kernel
-          DEFCONFIG="vendor/sm8150-perf_defconfig"
+          export PATH="${GITHUB_WORKSPACE}/toolchain/clang/bin:${GITHUB_WORKSPACE}/toolchain/gcc64/bin:${GITHUB_WORKSPACE}/toolchain/gcc32/bin:$PATH"
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export CLANG_TRIPLE=aarch64-linux-gnu-
+          export CROSS_COMPILE=aarch64-linux-android-
+          export CROSS_COMPILE_ARM32=arm-linux-androideabi-
 
-          # Merge LGE device specific configuration fragments
-          if [ -f "arch/arm64/configs/vendor/flashlmdd.config" ]; then
-            cat arch/arm64/configs/vendor/flashlmdd.config >> "arch/arm64/configs/$DEFCONFIG"
-          elif [ -f "arch/arm64/configs/vendor/alphaplus.config" ]; then
-            cat arch/arm64/configs/vendor/alphaplus.config >> "arch/arm64/configs/$DEFCONFIG"
-          fi
+          # 1. Base defconfig
+          make O=out CC=clang vendor/sm8150-perf_defconfig
 
-          # Enable Kali NetHunter Kernel features
-          cat << 'EOF' >> "arch/arm64/configs/$DEFCONFIG"
+          # 2. Append LGE hardware fragments
+          for frag in arch/arm64/configs/vendor/flashlmdd.config arch/arm64/configs/vendor/alphaplus.config arch/arm64/configs/vendor/lge.config; do
+            if [ -f "$frag" ]; then
+              echo "Merging fragment $frag..."
+              cat "$frag" >> out/.config
+            fi
+          done
+
+          # 3. Append Kali NetHunter Features
+          cat << 'EOF' >> out/.config
           CONFIG_MACH_LGE=y
           CONFIG_CFG80211=y
           CONFIG_CFG80211_WEXT=y
@@ -85,19 +94,11 @@ jobs:
           CONFIG_PID_NS=y
           CONFIG_NET_NS=y
           EOF
-          cd ..
 
-      - name: Compile Kernel (Clang + LLVM)
-        run: |
-          cd kernel
-          export PATH="${GITHUB_WORKSPACE}/toolchain/clang/bin:${GITHUB_WORKSPACE}/toolchain/gcc64/bin:${GITHUB_WORKSPACE}/toolchain/gcc32/bin:$PATH"
-          export ARCH=arm64
-          export SUBARCH=arm64
-          export CLANG_TRIPLE=aarch64-linux-gnu-
-          export CROSS_COMPILE=aarch64-linux-android-
-          export CROSS_COMPILE_ARM32=arm-linux-androideabi-
+          # 4. Resolve full configuration
+          make O=out CC=clang olddefconfig
 
-          make O=out vendor/sm8150-perf_defconfig
+          # 5. Build Kernel Image & DTBs
           make -j$(nproc --all) O=out \
             CC=clang \
             CROSS_COMPILE=$CROSS_COMPILE \
