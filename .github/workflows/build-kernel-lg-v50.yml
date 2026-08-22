@@ -66,6 +66,9 @@ jobs:
           # Patch FG_LGE definition if missing
           sed -i '1s/^/#ifndef FG_LGE\n#define FG_LGE BIT(16)\n#endif\n/' drivers/power/supply/qcom/qpnp-fg-gen4.c || true
 
+          # Patch qpnp-qnovo5.c pinctrl fields
+          sed -i 's/struct qnovo {/struct qnovo {\n\tstruct pinctrl *pinctrl;\n\tstruct pinctrl_state *pinctrl_state1;\n\tstruct pinctrl_state *pinctrl_state2;/g' drivers/power/supply/qcom/qpnp-qnovo5.c || true
+
           # Provide weak stubs in board_lge.c for linker safety
           if [ -f "drivers/soc/qcom/lge/board_lge.c" ]; then
             echo "int __attribute__((weak)) lge_get_boot_mode(void) { return 0; }" >> drivers/soc/qcom/lge/board_lge.c
@@ -122,7 +125,8 @@ jobs:
             --enable CONFIG_UTS_NS \
             --enable CONFIG_IPC_NS \
             --enable CONFIG_PID_NS \
-            --enable CONFIG_NET_NS
+            --enable CONFIG_NET_NS \
+            --disable CONFIG_QPNP_QNOVO5
 
           make O=out CC=clang olddefconfig
           cd ..
