@@ -20,7 +20,7 @@ jobs:
             git gnupg gperf libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools \
             xsltproc zip zlib1g-dev libssl-dev libncurses5-dev libelf-dev xz-utils
 
-      - name: Download Toolchains (Proton Clang & GCC)
+      - name: Download Toolchains (Proton Clang & AOSP GCC)
         run: |
           mkdir -p toolchain
           cd toolchain
@@ -50,7 +50,6 @@ jobs:
 
           # Add NetHunter Kernel options
           cat << 'EOF' >> "arch/arm64/configs/$DEFCONFIG"
-          # Kali NetHunter Wireless Injection & Monitor Mode
           CONFIG_CFG80211=y
           CONFIG_CFG80211_WEXT=y
           CONFIG_MAC80211=y
@@ -59,7 +58,6 @@ jobs:
           CONFIG_MAC80211_LEDS=y
           CONFIG_NET_RADIO=y
 
-          # External USB Wi-Fi Adapters Drivers
           CONFIG_ATH9K_HTC=m
           CONFIG_ATH9K_HTC_DEBUGFS=y
           CONFIG_RTL8187=m
@@ -73,11 +71,9 @@ jobs:
           CONFIG_RTL8XXXU=m
           CONFIG_MT7601U=m
 
-          # NetHunter HID Attack (BadUSB keyboard & mouse emulation)
           CONFIG_USB_CONFIGFS_F_HID=y
           CONFIG_USB_F_HID=y
 
-          # Namespaces and System Calls for NetHunter Chroot / Containers
           CONFIG_SYSVIPC=y
           CONFIG_POSIX_MQUEUE=y
           CONFIG_NAMESPACES=y
@@ -109,7 +105,7 @@ jobs:
             CROSS_COMPILE=$CROSS_COMPILE \
             CROSS_COMPILE_ARM32=$CROSS_COMPILE_ARM32 \
             CLANG_TRIPLE=$CLANG_TRIPLE \
-            Image.gz-dtb || make -j$(nproc --all) O=out CC=clang Image.gz dtb.img
+            Image.gz dtbs
           cd ..
 
       - name: Package with AnyKernel3
@@ -119,11 +115,10 @@ jobs:
           sed -i 's/do.devicecheck=1/do.devicecheck=0/g' anykernel.sh
           sed -i 's/block=auto/block=\/dev\/block\/bootdevice\/by-name\/boot/g' anykernel.sh
           
-          if [ -f "../kernel/out/arch/arm64/boot/Image.gz-dtb" ]; then
-            cp ../kernel/out/arch/arm64/boot/Image.gz-dtb .
-          elif [ -f "../kernel/out/arch/arm64/boot/Image.gz" ]; then
+          if [ -f "../kernel/out/arch/arm64/boot/Image.gz" ]; then
             cp ../kernel/out/arch/arm64/boot/Image.gz .
-            [ -f "../kernel/out/arch/arm64/boot/dtb.img" ] && cp ../kernel/out/arch/arm64/boot/dtb.img .
+          elif [ -f "../kernel/out/arch/arm64/boot/Image" ]; then
+            cp ../kernel/out/arch/arm64/boot/Image .
           fi
 
           ZIPNAME="NetHunter-Kernel-Asus-X00TD-$(date +%Y%m%d_%H%M%S).zip"
