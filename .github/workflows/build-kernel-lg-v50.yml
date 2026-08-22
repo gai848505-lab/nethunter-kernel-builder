@@ -43,24 +43,24 @@ jobs:
           # Patch board_lge.h header declarations
           cat << 'EOF' >> include/soc/qcom/lge/board_lge.h
 
-          #ifndef _LGE_EXTRA_TYPES_H
-          #define _LGE_EXTRA_TYPES_H
-          #include <linux/types.h>
-          #ifndef LGE_BOOT_MODE_CHARGERLOGO
-          #define LGE_BOOT_MODE_CHARGERLOGO 1
-          #endif
-          #ifndef LT_CABLE_56K
-          typedef int cable_boot_type;
-          #define LT_CABLE_56K 1
-          #define LT_CABLE_130K 2
-          #define LT_CABLE_910K 3
-          #endif
-          extern int lge_get_boot_mode(void);
-          extern int lge_get_factory_boot(void);
-          extern int lge_get_mfts_mode(void);
-          extern cable_boot_type lge_get_boot_cable(void);
-          #endif
-          EOF
+#ifndef _LGE_EXTRA_TYPES_H
+#define _LGE_EXTRA_TYPES_H
+#include <linux/types.h>
+#ifndef LGE_BOOT_MODE_CHARGERLOGO
+#define LGE_BOOT_MODE_CHARGERLOGO 1
+#endif
+#ifndef LT_CABLE_56K
+typedef int cable_boot_type;
+#define LT_CABLE_56K 1
+#define LT_CABLE_130K 2
+#define LT_CABLE_910K 3
+#endif
+extern int lge_get_boot_mode(void);
+extern int lge_get_factory_boot(void);
+extern int lge_get_mfts_mode(void);
+extern cable_boot_type lge_get_boot_cable(void);
+#endif
+EOF
 
           # Include board_lge.h in callers
           sed -i '1s/^/#include <linux\/types.h>\n#include <soc\/qcom\/lge\/board_lge.h>\n/' fs/proc/cmdline.c techpack/audio/asoc/codecs/es9218p.c drivers/gpu/drm/msm/lge/lge_dsi_panel.c || true
@@ -68,11 +68,11 @@ jobs:
           # Provide weak stubs in board_lge.c for linker safety
           if [ -f "drivers/soc/qcom/lge/board_lge.c" ]; then
             cat << 'EOF' >> drivers/soc/qcom/lge/board_lge.c
-            int __attribute__((weak)) lge_get_boot_mode(void) { return 0; }
-            int __attribute__((weak)) lge_get_factory_boot(void) { return 0; }
-            int __attribute__((weak)) lge_get_mfts_mode(void) { return 0; }
-            cable_boot_type __attribute__((weak)) lge_get_boot_cable(void) { return 0; }
-            EOF
+int __attribute__((weak)) lge_get_boot_mode(void) { return 0; }
+int __attribute__((weak)) lge_get_factory_boot(void) { return 0; }
+int __attribute__((weak)) lge_get_mfts_mode(void) { return 0; }
+cable_boot_type __attribute__((weak)) lge_get_boot_cable(void) { return 0; }
+EOF
           fi
 
           git clone --depth=1 https://github.com/aircrack-ng/rtl8812au.git drivers/net/wireless/rtl8812au || true
