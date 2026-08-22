@@ -86,6 +86,11 @@ jobs:
           sed -i '/struct dwc3 {/a \	void *usbpd;' drivers/usb/dwc3/core.h || true
           sed -i 's/dwc->usbpd = devm_usbpd_get_by_phandle(dev, "usbpd");/\/\/ dwc->usbpd/' drivers/usb/dwc3/core.c || true
 
+          # Patch USB-PD policy engine LG OEM moisture and DisplayPort extensions
+          sed -i '1s/^/#define DP_USBPD_VDM_CONFIGURE 0x10\n#define DUAL_ROLE_PROP_MOISTURE_UX_ENABLE 1\n#define DUAL_ROLE_PROP_MOISTURE_USB_DISABLE 0\n/' drivers/usb/pd/policy_engine.c || true
+          sed -i 's/pd->is_moisture_ux =/\/\/ pd->is_moisture_ux =/' drivers/usb/pd/policy_engine.c || true
+          sed -i 's/pd->moisture_usb_en =/\/\/ pd->moisture_usb_en =/' drivers/usb/pd/policy_engine.c || true
+
           # Allow warnings and ignored optimization arguments without failing build
           echo "KBUILD_CFLAGS += -Wno-error -Wno-ignored-optimization-argument -Wno-unknown-warning-option -Wno-implicit-function-declaration" >> arch/arm64/Makefile
 
