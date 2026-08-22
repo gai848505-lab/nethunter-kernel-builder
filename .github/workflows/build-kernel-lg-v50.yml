@@ -82,8 +82,8 @@ jobs:
           sed -i '1s/^/struct ufs_hba;\nint ufshcd_read_health_desc(struct ufs_hba *hba, u8 *desc_buf, int size);\n/' drivers/scsi/ufs/ufshcd.c || true
           echo "int __attribute__((weak)) ufshcd_read_health_desc(struct ufs_hba *hba, u8 *desc_buf, int size) { return 0; }" >> drivers/scsi/ufs/ufshcd.c
 
-          # Allow warnings without failing build
-          echo "KBUILD_CFLAGS += -Wno-error=implicit-function-declaration -Wno-error" >> arch/arm64/Makefile
+          # Allow warnings and ignored optimization arguments without failing build
+          echo "KBUILD_CFLAGS += -Wno-error -Wno-ignored-optimization-argument -Wno-unknown-warning-option -Wno-implicit-function-declaration" >> arch/arm64/Makefile
 
           git clone --depth=1 https://github.com/aircrack-ng/rtl8812au.git drivers/net/wireless/rtl8812au || true
           cd ..
