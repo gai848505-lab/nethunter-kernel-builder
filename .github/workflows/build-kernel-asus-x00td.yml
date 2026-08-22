@@ -36,6 +36,8 @@ jobs:
           git clone --depth=1 https://github.com/Neternels/android_kernel_asus_sdm660.git -b 11.0-nethunter kernel || \
           git clone --depth=1 https://github.com/LineageOS/android_kernel_asus_sdm660.git -b lineage-18.1 kernel
           cd kernel
+          # Fix 4.4 mac80211 60GHz enum mismatch if present
+          sed -i 's/case IEEE80211_BAND_60GHZ://g' net/mac80211/tx.c || true
           git clone --depth=1 https://github.com/aircrack-ng/rtl8812au.git drivers/net/wireless/rtl8812au || true
           cd ..
 

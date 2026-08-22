@@ -38,20 +38,21 @@ jobs:
           git clone --depth=1 https://github.com/aircrack-ng/rtl8812au.git drivers/net/wireless/rtl8812au || true
           cd ..
 
-      - name: Configure Defconfig with NetHunter Features
+      - name: Configure Defconfig with LGE & NetHunter Features
         run: |
           cd kernel
-          DEFCONFIG="vendor/flashlmdd_perf_defconfig"
-          if [ ! -f "arch/arm64/configs/$DEFCONFIG" ]; then
-            DEFCONFIG="vendor/alphaplus_perf_defconfig"
+          DEFCONFIG="vendor/sm8150-perf_defconfig"
+
+          # Merge LGE device specific configuration fragments
+          if [ -f "arch/arm64/configs/vendor/flashlmdd.config" ]; then
+            cat arch/arm64/configs/vendor/flashlmdd.config >> "arch/arm64/configs/$DEFCONFIG"
+          elif [ -f "arch/arm64/configs/vendor/alphaplus.config" ]; then
+            cat arch/arm64/configs/vendor/alphaplus.config >> "arch/arm64/configs/$DEFCONFIG"
           fi
-          if [ ! -f "arch/arm64/configs/$DEFCONFIG" ]; then
-            DEFCONFIG="vendor/sm8150-perf_defconfig"
-          fi
-          echo "Target defconfig: $DEFCONFIG"
 
           # Enable Kali NetHunter Kernel features
           cat << 'EOF' >> "arch/arm64/configs/$DEFCONFIG"
+          CONFIG_MACH_LGE=y
           CONFIG_CFG80211=y
           CONFIG_CFG80211_WEXT=y
           CONFIG_MAC80211=y
@@ -96,15 +97,7 @@ jobs:
           export CROSS_COMPILE=aarch64-linux-android-
           export CROSS_COMPILE_ARM32=arm-linux-androideabi-
 
-          DEFCONFIG="vendor/flashlmdd_perf_defconfig"
-          if [ ! -f "arch/arm64/configs/$DEFCONFIG" ]; then
-            DEFCONFIG="vendor/alphaplus_perf_defconfig"
-          fi
-          if [ ! -f "arch/arm64/configs/$DEFCONFIG" ]; then
-            DEFCONFIG="vendor/sm8150-perf_defconfig"
-          fi
-
-          make O=out $DEFCONFIG
+          make O=out vendor/sm8150-perf_defconfig
           make -j$(nproc --all) O=out \
             CC=clang \
             CROSS_COMPILE=$CROSS_COMPILE \
