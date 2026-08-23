@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - '.github/workflows/build-kernel-lg-v50.yml'
+      - 'configs/**'
 
 jobs:
   build:
@@ -31,99 +32,19 @@ jobs:
           git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git gcc32
           cd ..
 
-      - name: Fetch LG V50 Kernel Source (SM8150 / 4.14)
+      - name: Fetch LG V50 Kernel Source (LineageOS 21 / SM8150)
         run: |
-          git clone --depth=1 https://github.com/LineageOS/android_kernel_lge_sm8150.git -b lineage-20 kernel
+          git clone --depth=1 https://github.com/LineageOS/android_kernel_lge_sm8150.git -b lineage-21 kernel
           cd kernel
-          
-          # Patch header syntax in lge_prm.h
-          find . -name "lge_prm.h" -exec sed -i 's/{return 0}/{return 0;}/g' {} +
-          find . -name "lge_prm.h" -exec sed -i 's/void lge_prm_display_set_event(.*) {return 0};/void lge_prm_display_set_event(enum display_event event, int value) { return; };/g' {} +
-
-          # Patch board_lge.h header declarations using echo
-          echo "#ifndef _LGE_EXTRA_TYPES_H" >> include/soc/qcom/lge/board_lge.h
-          echo "#define _LGE_EXTRA_TYPES_H" >> include/soc/qcom/lge/board_lge.h
-          echo "#include <linux/types.h>" >> include/soc/qcom/lge/board_lge.h
-          echo "#ifndef LGE_BOOT_MODE_CHARGERLOGO" >> include/soc/qcom/lge/board_lge.h
-          echo "#define LGE_BOOT_MODE_CHARGERLOGO 1" >> include/soc/qcom/lge/board_lge.h
-          echo "#endif" >> include/soc/qcom/lge/board_lge.h
-          echo "#ifndef LT_CABLE_56K" >> include/soc/qcom/lge/board_lge.h
-          echo "typedef int cable_boot_type;" >> include/soc/qcom/lge/board_lge.h
-          echo "#define LT_CABLE_56K 1" >> include/soc/qcom/lge/board_lge.h
-          echo "#define LT_CABLE_130K 2" >> include/soc/qcom/lge/board_lge.h
-          echo "#define LT_CABLE_910K 3" >> include/soc/qcom/lge/board_lge.h
-          echo "#endif" >> include/soc/qcom/lge/board_lge.h
-          echo "extern int lge_get_boot_mode(void);" >> include/soc/qcom/lge/board_lge.h
-          echo "extern int lge_get_factory_boot(void);" >> include/soc/qcom/lge/board_lge.h
-          echo "extern int lge_get_mfts_mode(void);" >> include/soc/qcom/lge/board_lge.h
-          echo "extern bool lge_get_download_mode(void);" >> include/soc/qcom/lge/board_lge.h
-          echo "extern cable_boot_type lge_get_boot_cable(void);" >> include/soc/qcom/lge/board_lge.h
-          echo "#endif" >> include/soc/qcom/lge/board_lge.h
-
-          # Include board_lge.h in callers
-          sed -i '1s/^/#include <linux\/types.h>\n#include <soc\/qcom\/lge\/board_lge.h>\n/' fs/proc/cmdline.c techpack/audio/asoc/codecs/es9218p.c drivers/gpu/drm/msm/lge/lge_dsi_panel.c drivers/power/reset/msm-poweroff.c || true
-
-          # Patch FG_LGE definition if missing
-          sed -i '1s/^/#ifndef FG_LGE\n#define FG_LGE BIT(16)\n#endif\n/' drivers/power/supply/qcom/qpnp-fg-gen4.c || true
-
-          # Patch qpnp-qnovo5.c pinctrl fields
-          sed -i 's/struct qnovo {/struct qnovo {\n\tstruct pinctrl *pinctrl;\n\tstruct pinctrl_state *pinctrl_state1;\n\tstruct pinctrl_state *pinctrl_state2;/g' drivers/power/supply/qcom/qpnp-qnovo5.c || true
-
-          # Provide weak stubs in board_lge.c for linker safety
-          if [ -f "drivers/soc/qcom/lge/board_lge.c" ]; then
-            echo "int __attribute__((weak)) lge_get_boot_mode(void) { return 0; }" >> drivers/soc/qcom/lge/board_lge.c
-            echo "int __attribute__((weak)) lge_get_factory_boot(void) { return 0; }" >> drivers/soc/qcom/lge/board_lge.c
-            echo "int __attribute__((weak)) lge_get_mfts_mode(void) { return 0; }" >> drivers/soc/qcom/lge/board_lge.c
-            echo "bool __attribute__((weak)) lge_get_download_mode(void) { return false; }" >> drivers/soc/qcom/lge/board_lge.c
-            echo "cable_boot_type __attribute__((weak)) lge_get_boot_cable(void) { return 0; }" >> drivers/soc/qcom/lge/board_lge.c
-          fi
-
-          # Patch UFS driver health descriptor function declaration with proper linux/types.h
-          sed -i '1s/^/#include <linux\/types.h>\nstruct ufs_hba;\nint ufshcd_read_health_desc(struct ufs_hba *hba, u8 *desc_buf, int size);\n/' drivers/scsi/ufs/ufshcd.c || true
-          echo "int __attribute__((weak)) ufshcd_read_health_desc(struct ufs_hba *hba, u8 *desc_buf, int size) { return 0; }" >> drivers/scsi/ufs/ufshcd.c
-
-          # Patch dwc3 usbpd missing struct member
-          sed -i '/struct dwc3 {/a \	void *usbpd;' drivers/usb/dwc3/core.h || true
-          sed -i 's/dwc->usbpd = devm_usbpd_get_by_phandle(dev, "usbpd");/\/\/ dwc->usbpd/' drivers/usb/dwc3/core.c || true
-
-          # Patch USB-PD policy engine LG OEM moisture and DisplayPort extensions
-          sed -i '1s/^/#define DP_USBPD_VDM_CONFIGURE 0x10\n#define DUAL_ROLE_PROP_MOISTURE_UX_ENABLE 1\n#define DUAL_ROLE_PROP_MOISTURE_USB_DISABLE 0\n/' drivers/usb/pd/policy_engine.c || true
-          sed -i 's/pd->is_moisture_ux =/\/\/ pd->is_moisture_ux =/' drivers/usb/pd/policy_engine.c || true
-          sed -i 's/pd->moisture_usb_en =/\/\/ pd->moisture_usb_en =/' drivers/usb/pd/policy_engine.c || true
-
-          # Add missing LGE symbols stub into arch/arm64/kernel/lge_stubs.c
-          echo "#include <linux/types.h>" > arch/arm64/kernel/lge_stubs.c
-          echo "#include <linux/compiler.h>" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak lge_get_download_mode(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak lge_get_factory_boot(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak lge_get_boot_mode(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak touch_notifier_call_chain(unsigned long val, void *v) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak msm_ois_create_sysfs(void *s, void *d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak msm_stopGyroThread(void *s) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak msm_ois_destroy_sysfs(void *s, void *d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak parse_ois_userdata(void *s, void *d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak lgit_imx363_init_set_onsemi_ois(void *s) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak lgit_imx363_onsemi_ois_poll_ready(void *s) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak oeis_create_sysfs(void *s, void *d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak oeis_destroy_sysfs(void *s, void *d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak pd_phy_update_frame_filter(void *s, u8 d) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak lge_get_boot_cable(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak lge_get_mfts_mode(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak lge_get_board_rev_no(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak lge_get_board_revision(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak lge_get_hw_rev(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak lge_get_sub_board_rev(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak lge_get_pmic_rev(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "int __weak lge_get_cable_type(void) { return 0; }" >> arch/arm64/kernel/lge_stubs.c
-          echo "obj-y += lge_stubs.o" >> arch/arm64/kernel/Makefile
 
           # Allow warnings and ignored optimization arguments without failing build
           echo "KBUILD_CFLAGS += -Wno-error -Wno-ignored-optimization-argument -Wno-unknown-warning-option -Wno-implicit-function-declaration" >> arch/arm64/Makefile
 
+          # Clone RTL8812AU wireless injection driver
           git clone --depth=1 https://github.com/aircrack-ng/rtl8812au.git drivers/net/wireless/rtl8812au || true
           cd ..
 
-      - name: Configure and Merge Defconfig
+      - name: Configure with Exact Running Defconfig & NetHunter Features
         run: |
           cd kernel
           export PATH="${GITHUB_WORKSPACE}/toolchain/clang/bin:${GITHUB_WORKSPACE}/toolchain/gcc64/bin:${GITHUB_WORKSPACE}/toolchain/gcc32/bin:$PATH"
@@ -135,19 +56,12 @@ jobs:
 
           mkdir -p out
           
-          CONFIG_FRAG=""
-          if [ -f "arch/arm64/configs/vendor/flashlmdd.config" ]; then
-            CONFIG_FRAG="arch/arm64/configs/vendor/flashlmdd.config"
-          elif [ -f "arch/arm64/configs/vendor/alphaplus.config" ]; then
-            CONFIG_FRAG="arch/arm64/configs/vendor/alphaplus.config"
-          fi
+          # Use the exact running defconfig extracted from the phone
+          cp ../configs/flashlmdd_lineage21_defconfig out/.config
 
-          echo "Merging configs with merge_config.sh..."
-          ARCH=arm64 ./scripts/kconfig/merge_config.sh -m -O out arch/arm64/configs/vendor/sm8150-perf_defconfig $CONFIG_FRAG
-
-          # Enable Kali NetHunter features
+          # Enable Kali NetHunter wireless & penetration testing features
           ./scripts/config --file out/.config \
-            --enable CONFIG_MACH_LGE \
+            --set-str CONFIG_LOCALVERSION "-openela-perf+" \
             --enable CONFIG_CFG80211 \
             --enable CONFIG_CFG80211_WEXT \
             --enable CONFIG_MAC80211 \
@@ -167,8 +81,7 @@ jobs:
             --enable CONFIG_UTS_NS \
             --enable CONFIG_IPC_NS \
             --enable CONFIG_PID_NS \
-            --enable CONFIG_NET_NS \
-            --disable CONFIG_QPNP_QNOVO5
+            --enable CONFIG_NET_NS
 
           make O=out CC=clang olddefconfig
           cd ..
@@ -196,7 +109,12 @@ jobs:
           git clone https://github.com/osm0sis/AnyKernel3.git anykernel
           cd anykernel
           sed -i 's/do.devicecheck=1/do.devicecheck=0/g' anykernel.sh
-          sed -i 's/block=auto/block=\/dev\/block\/bootdevice\/by-name\/boot/g' anykernel.sh
+          sed -i 's/BLOCK=.*/BLOCK=boot;/g' anykernel.sh
+          sed -i 's/IS_SLOT_DEVICE=0;/IS_SLOT_DEVICE=1;/g' anykernel.sh
+          # Remove sample patching of non-existent tuna files
+          sed -i '/fstab\.tuna/d' anykernel.sh
+          sed -i '/init\.tuna/d' anykernel.sh
+          sed -i '/init\.rc/d' anykernel.sh
           
           if [ -f "../kernel/out/arch/arm64/boot/Image.gz" ]; then
             cp ../kernel/out/arch/arm64/boot/Image.gz .
@@ -204,7 +122,7 @@ jobs:
             cp ../kernel/out/arch/arm64/boot/Image .
           fi
 
-          ZIPNAME="NetHunter-Kernel-LG-V50-$(date +%Y%m%d_%H%M%S).zip"
+          ZIPNAME="NetHunter-Kernel-LG-V50-Lineage21-$(date +%Y%m%d_%H%M%S).zip"
           zip -r9 "$ZIPNAME" * -x .git README.md *placeholder
           echo "ZIPNAME=$ZIPNAME" >> $GITHUB_ENV
           cd ..
