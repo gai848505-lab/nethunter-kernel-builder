@@ -101,7 +101,7 @@ jobs:
             CROSS_COMPILE=$CROSS_COMPILE \
             CROSS_COMPILE_ARM32=$CROSS_COMPILE_ARM32 \
             CLANG_TRIPLE=$CLANG_TRIPLE \
-            Image.gz dtbs
+            Image.gz
           cd ..
 
       - name: Package with AnyKernel3
