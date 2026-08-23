@@ -77,6 +77,9 @@ jobs:
             --module CONFIG_MT7601U \
             --enable CONFIG_USB_CONFIGFS_F_HID \
             --enable CONFIG_USB_F_HID \
+            --disable CONFIG_ANDROID_BINDERFS \
+            --enable CONFIG_ANDROID_BINDER_IPC \
+            --set-str CONFIG_ANDROID_BINDER_DEVICES "binder,hwbinder,vndbinder" \
             --enable CONFIG_NAMESPACES \
             --enable CONFIG_UTS_NS \
             --enable CONFIG_IPC_NS \
