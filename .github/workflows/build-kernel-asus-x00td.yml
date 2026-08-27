@@ -118,7 +118,13 @@ jobs:
           git clone https://github.com/osm0sis/AnyKernel3.git anykernel
           cd anykernel
           sed -i 's/do.devicecheck=1/do.devicecheck=0/g' anykernel.sh
-          sed -i 's/block=auto/block=\/dev\/block\/bootdevice\/by-name\/boot/g' anykernel.sh
+          sed -i 's|BLOCK=.*|BLOCK=/dev/block/bootdevice/by-name/boot;|g' anykernel.sh
+          sed -i 's/IS_SLOT_DEVICE=1/IS_SLOT_DEVICE=0/g' anykernel.sh
+          sed -i 's/device.name1=maguro/device.name1=X00TD/g' anykernel.sh
+          sed -i 's/kernel.string=.*/kernel.string=Kali NetHunter Kernel for Asus X00TD/g' anykernel.sh
+          
+          # Remove Galaxy Nexus sample patches from anykernel.sh
+          sed -i '/init.rc/,/write_boot/ { /backup_file/d; /replace_string/d; /insert_line/d; /append_file/d; /patch_fstab/d; }' anykernel.sh
           
           if [ -f "../kernel/out/arch/arm64/boot/Image.gz-dtb" ]; then
             cp ../kernel/out/arch/arm64/boot/Image.gz-dtb ./Image.gz-dtb
