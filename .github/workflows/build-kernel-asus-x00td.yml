@@ -39,7 +39,8 @@ jobs:
           cd kernel
           
           # Ensure ASUS SDM660 flags are defined and disable failing warnings
-          echo "KBUILD_CFLAGS += -DCONFIG_MACH_ASUS_SDM660=1 -Wno-error" >> Makefile
+          echo "KBUILD_CFLAGS += -DCONFIG_MACH_ASUS_SDM660=1 -DTFA9874_NONDSP_STEREO=1 -Wno-error" >> Makefile
+          sed -i 's/#ifdef TFA9874_NONDSP_STEREO/#if 1/g' sound/soc/codecs/tfa9874/inc/tfa98xx.h || true
 
           # Ensure mac80211 60GHz compatibility in 4.4 kernel
           sed -i 's/case IEEE80211_BAND_60GHZ://g' net/mac80211/*.c || true
