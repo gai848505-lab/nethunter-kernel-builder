@@ -37,6 +37,11 @@ jobs:
           git clone --depth=1 https://github.com/tattwamashi/android_kernel_asus_sdm660-LTO.git -b pie kernel || \
           git clone --depth=1 https://github.com/LineageOS/android_kernel_asus_sdm660.git -b lineage-18.1 kernel
           cd kernel
+          
+          # Fix Asus SDM660 sound driver logic bug in tfa98xx.c
+          sed -i 's/uint8_t \*buffer;/uint8_t *buffer;\n\tenum Tfa98xx_Error error = Tfa98xx_Error_Ok;/g' sound/soc/codecs/tfa9874/src/tfa98xx.c || true
+          sed -i 's/enum Tfa98xx_Error error;//g' sound/soc/codecs/tfa9874/src/tfa98xx.c || true
+
           # Ensure mac80211 60GHz compatibility in 4.4 kernel
           sed -i 's/case IEEE80211_BAND_60GHZ://g' net/mac80211/*.c || true
           sed -i 's/IEEE80211_BAND_60GHZ/4/g' net/mac80211/*.c || true
@@ -112,7 +117,7 @@ jobs:
             CROSS_COMPILE=$CROSS_COMPILE \
             CROSS_COMPILE_ARM32=$CROSS_COMPILE_ARM32 \
             CLANG_TRIPLE=$CLANG_TRIPLE \
-            Image.gz-dtb Image.gz dtbs || true
+            Image.gz-dtb Image.gz dtbs
 
           if [ ! -f "out/arch/arm64/boot/Image.gz-dtb" ] && [ -f "out/arch/arm64/boot/Image.gz" ]; then
             cat out/arch/arm64/boot/Image.gz out/arch/arm64/boot/dts/qcom/*.dtb > out/arch/arm64/boot/Image.gz-dtb 2>/dev/null || true
@@ -138,6 +143,9 @@ jobs:
             cp ../kernel/out/arch/arm64/boot/Image.gz .
           elif [ -f "../kernel/out/arch/arm64/boot/Image" ]; then
             cp ../kernel/out/arch/arm64/boot/Image .
+          else
+            echo "ERROR: Kernel binary Image not found!"
+            exit 1
           fi
 
           ZIPNAME="NetHunter-Kernel-Asus-X00TD-Pie-$(date +%Y%m%d_%H%M%S).zip"
