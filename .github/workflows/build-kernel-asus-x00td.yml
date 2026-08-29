@@ -38,9 +38,8 @@ jobs:
           git clone --depth=1 https://github.com/LineageOS/android_kernel_asus_sdm660.git -b lineage-18.1 kernel
           cd kernel
           
-          # Fix Asus SDM660 sound driver logic bug in tfa98xx.c
-          sed -i 's/uint8_t \*buffer;/uint8_t *buffer;\n\tenum Tfa98xx_Error error = Tfa98xx_Error_Ok;/g' sound/soc/codecs/tfa9874/src/tfa98xx.c || true
-          sed -i 's/enum Tfa98xx_Error error;//g' sound/soc/codecs/tfa9874/src/tfa98xx.c || true
+          # Ensure ASUS SDM660 flags are defined and disable failing warnings
+          echo "KBUILD_CFLAGS += -DCONFIG_MACH_ASUS_SDM660=1 -Wno-error" >> Makefile
 
           # Ensure mac80211 60GHz compatibility in 4.4 kernel
           sed -i 's/case IEEE80211_BAND_60GHZ://g' net/mac80211/*.c || true
@@ -70,6 +69,8 @@ jobs:
           # Enable Kali NetHunter wireless & penetration testing features
           ./scripts/config --file out/.config \
             --set-str CONFIG_LOCALVERSION "-perf+" \
+            --enable CONFIG_MACH_ASUS_SDM660 \
+            --enable CONFIG_MACH_ASUS_X00TD \
             --enable CONFIG_CFG80211 \
             --enable CONFIG_CFG80211_WEXT \
             --enable CONFIG_MAC80211 \
